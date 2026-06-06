@@ -1,6 +1,9 @@
 # AI 辅助剧本创作工具
 
 将小说文本自动转换为结构化剧本（YAML 格式），降低改编门槛，提升创作效率。
+## 视频演示
+【AI辅助剧本创作工具demo演示】 https://www.bilibili.com/video/BV1D87C6pESm/?share_source=copy_web&vd_source=5c22379d9b49cf25d6dc721d3dc0d178
+【AI辅助剧本创作工具功能拓展】 https://www.bilibili.com/video/BV1je7Q6XETY/?share_source=copy_web
 
 ## 功能特性
 
