@@ -50,4 +50,24 @@ export const exportScript = (taskId, format = 'yaml') => {
   })
 }
 
+// 分析剧本 - 完整报告
+export const analyzeScript = (taskId) => {
+  return api.get(`/analyze/${taskId}`)
+}
+
+// 分析角色关系
+export const analyzeRelationships = (taskId) => {
+  return api.get(`/analyze/${taskId}/relationships`)
+}
+
+// 分析剧情节奏
+export const analyzeRhythm = (taskId) => {
+  return api.get(`/analyze/${taskId}/rhythm`)
+}
+
+// 分析对话风格
+export const analyzeDialogue = (taskId) => {
+  return api.get(`/analyze/${taskId}/dialogue`)
+}
+
 export default api

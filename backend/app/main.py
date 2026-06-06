@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.routers import upload, convert, export
+from app.routers import upload, convert, export, analyze
 
 # 创建 FastAPI 应用
 app = FastAPI(
@@ -25,6 +25,7 @@ app.add_middleware(
 app.include_router(upload.router, prefix="/api", tags=["上传"])
 app.include_router(convert.router, prefix="/api", tags=["转换"])
 app.include_router(export.router, prefix="/api", tags=["导出"])
+app.include_router(analyze.router, prefix="/api", tags=["分析"])
 
 
 @app.get("/")

@@ -6,8 +6,24 @@
           <span>剧本预览</span>
           <div>
             <el-button @click="goBack">返回</el-button>
-            <el-button type="primary" @click="downloadYaml">下载 YAML</el-button>
-            <el-button type="success" @click="downloadTxt">下载 TXT</el-button>
+            <el-dropdown @command="handleExport" style="margin-left: 10px;">
+              <el-button type="primary">
+                导出剧本 <el-icon class="el-icon--right"><arrow-down /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="yaml">YAML 格式</el-dropdown-item>
+                  <el-dropdown-item command="json">JSON 格式</el-dropdown-item>
+                  <el-dropdown-item command="txt">TXT 格式</el-dropdown-item>
+                  <el-dropdown-item command="fdx">Final Draft (.fdx)</el-dropdown-item>
+                  <el-dropdown-item command="fountain">Fountain 格式</el-dropdown-item>
+                  <el-dropdown-item command="storyboard">分镜脚本</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+            <el-button type="success" @click="showAnalysisDialog" style="margin-left: 10px;">
+              智能分析
+            </el-button>
           </div>
         </div>
       </template>
@@ -102,6 +118,98 @@
         <el-divider />
       </div>
     </el-card>
+
+    <!-- 智能分析对话框 -->
+    <el-dialog v-model="analysisDialogVisible" title="剧本智能分析" width="80%" top="5vh">
+      <el-tabs v-model="activeAnalysisTab">
+        <el-tab-pane label="角色关系图谱" name="relationships">
+          <div v-if="relationshipData" class="analysis-content">
+            <div class="relationship-graph">
+              <h4>角色关系网络</h4>
+              <div class="nodes-list">
+                <el-tag v-for="node in relationshipData.nodes" :key="node.id"
+                  :type="node.role === 'protagonist' ? 'success' : node.role === 'supporting' ? 'warning' : 'info'"
+                  style="margin: 5px;">{{ node.name }}</el-tag>
+              </div>
+              <div class="links-list" v-if="relationshipData.links.length > 0">
+                <h4>关系连接</h4>
+                <el-table :data="relationshipData.links" size="small">
+                  <el-table-column prop="source" label="角色A" width="120" />
+                  <el-table-column prop="target" label="角色B" width="120" />
+                  <el-table-column prop="strength" label="强度" width="80">
+                    <template #default="{ row }">
+                      <el-rate v-model="row.strength" disabled :max="3" size="small" />
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </div>
+            </div>
+          </div>
+          <el-empty v-else description="暂无数据" />
+        </el-tab-pane>
+
+        <el-tab-pane label="剧情节奏分析" name="rhythm">
+          <div v-if="rhythmData" class="analysis-content">
+            <div class="rhythm-summary">
+              <el-descriptions :column="3" border>
+                <el-descriptions-item label="整体弧线">{{ rhythmData.overall_arc?.type }}</el-descriptions-item>
+                <el-descriptions-item label="弧线描述">{{ rhythmData.overall_arc?.description }}</el-descriptions-item>
+                <el-descriptions-item label="高潮章节">第 {{ rhythmData.overall_arc?.peak_episode }} 章</el-descriptions-item>
+              </el-descriptions>
+            </div>
+            <div class="episode-rhythm">
+              <h4>各章节节奏</h4>
+              <el-table :data="rhythmData.episodes" size="small">
+                <el-table-column prop="episode" label="章节" width="80" />
+                <el-table-column prop="title" label="标题" />
+                <el-table-column prop="pace" label="节奏" width="100">
+                  <template #default="{ row }">
+                    <el-tag :type="row.pace === 'fast' ? 'danger' : row.pace === 'slow' ? 'success' : 'warning'">
+                      {{ row.pace === 'fast' ? '快' : row.pace === 'slow' ? '慢' : '中' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="avg_intensity" label="情感强度" width="100">
+                  <template #default="{ row }">
+                    <el-progress :percentage="row.avg_intensity * 100" :stroke-width="8" />
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+            <div class="climax-points" v-if="rhythmData.climax_points?.length > 0">
+              <h4>高潮点检测</h4>
+              <el-table :data="rhythmData.climax_points" size="small">
+                <el-table-column prop="episode" label="章节" width="80" />
+                <el-table-column prop="type" label="类型" width="120">
+                  <template #default="{ row }">
+                    {{ row.type === 'action_climax' ? '动作高潮' : '对话高潮' }}
+                  </template>
+                </el-table-column>
+                <el-table-column prop="content" label="内容片段" />
+              </el-table>
+            </div>
+          </div>
+          <el-empty v-else description="暂无数据" />
+        </el-tab-pane>
+
+        <el-tab-pane label="对话风格分析" name="dialogue">
+          <div v-if="dialogueData" class="analysis-content">
+            <el-table :data="Object.entries(dialogueData).map(([name, data]) => ({ name, ...data }))" size="small">
+              <el-table-column prop="name" label="角色" width="120" />
+              <el-table-column prop="dialogue_count" label="台词数" width="80" />
+              <el-table-column prop="avg_length" label="平均长度" width="100" />
+              <el-table-column prop="style" label="风格" width="120">
+                <template #default="{ row }">
+                  <el-tag :type="getStyleTagType(row.style)">{{ getStyleText(row.style) }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="description" label="描述" />
+            </el-table>
+          </div>
+          <el-empty v-else description="暂无数据" />
+        </el-tab-pane>
+      </el-tabs>
+    </el-dialog>
   </div>
 </template>
 
@@ -109,10 +217,12 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getConvertProgress, exportScript } from '../api'
+import { ArrowDown } from '@element-plus/icons-vue'
+import { getConvertProgress, exportScript, analyzeScript, analyzeRelationships, analyzeRhythm, analyzeDialogue } from '../api'
 
 export default {
   name: 'Preview',
+  components: { ArrowDown },
   setup() {
     const router = useRouter()
     const route = useRoute()
@@ -122,6 +232,12 @@ export default {
     const characters = ref([])
     const locations = ref([])
     const episodes = ref([])
+
+    const analysisDialogVisible = ref(false)
+    const activeAnalysisTab = ref('relationships')
+    const relationshipData = ref(null)
+    const rhythmData = ref(null)
+    const dialogueData = ref(null)
 
     // 加载剧本数据
     const loadScriptData = async () => {
@@ -201,36 +317,83 @@ export default {
       router.push('/')
     }
 
-    // 下载 YAML
-    const downloadYaml = async () => {
+    // 导出剧本
+    const handleExport = async (format) => {
       try {
-        const response = await exportScript(taskId, 'yaml')
-        const blob = new Blob([response.data], { type: 'application/x-yaml' })
+        const response = await exportScript(taskId, format)
+        const mimeTypes = {
+          'yaml': 'application/x-yaml',
+          'json': 'application/json',
+          'txt': 'text/plain',
+          'fdx': 'application/xml',
+          'fountain': 'text/plain',
+          'storyboard': 'text/plain'
+        }
+        const extensions = {
+          'yaml': 'yaml',
+          'json': 'json',
+          'txt': 'txt',
+          'fdx': 'fdx',
+          'fountain': 'fountain',
+          'storyboard': 'txt'
+        }
+        const blob = new Blob([response.data], { type: mimeTypes[format] })
         const url = window.URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
-        link.download = 'script.yaml'
+        link.download = `script.${extensions[format]}`
         link.click()
         window.URL.revokeObjectURL(url)
+        ElMessage.success(`导出 ${format} 格式成功`)
       } catch (error) {
-        ElMessage.error('下载失败')
+        ElMessage.error('导出失败')
       }
     }
 
-    // 下载 TXT
-    const downloadTxt = async () => {
+    // 显示分析对话框
+    const showAnalysisDialog = async () => {
+      analysisDialogVisible.value = true
+      await loadAnalysisData()
+    }
+
+    // 加载分析数据
+    const loadAnalysisData = async () => {
       try {
-        const response = await exportScript(taskId, 'txt')
-        const blob = new Blob([response.data], { type: 'text/plain' })
-        const url = window.URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = 'script.txt'
-        link.click()
-        window.URL.revokeObjectURL(url)
+        const [relRes, rhythmRes, dialogueRes] = await Promise.all([
+          analyzeRelationships(taskId),
+          analyzeRhythm(taskId),
+          analyzeDialogue(taskId)
+        ])
+        relationshipData.value = relRes.data
+        rhythmData.value = rhythmRes.data
+        dialogueData.value = dialogueRes.data
       } catch (error) {
-        ElMessage.error('下载失败')
+        ElMessage.error('加载分析数据失败')
       }
+    }
+
+    // 获取风格标签类型
+    const getStyleTagType = (style) => {
+      const styleMap = {
+        'passionate': 'danger',
+        'inquisitive': 'primary',
+        'verbose': 'warning',
+        'concise': 'success',
+        'balanced': 'info'
+      }
+      return styleMap[style] || 'info'
+    }
+
+    // 获取风格文本
+    const getStyleText = (style) => {
+      const styleMap = {
+        'passionate': '热情型',
+        'inquisitive': '提问型',
+        'verbose': '详尽型',
+        'concise': '简洁型',
+        'balanced': '平衡型'
+      }
+      return styleMap[style] || '未知'
     }
 
     onMounted(loadScriptData)
@@ -247,8 +410,15 @@ export default {
       getLocationName,
       getCharacterName,
       goBack,
-      downloadYaml,
-      downloadTxt
+      handleExport,
+      analysisDialogVisible,
+      activeAnalysisTab,
+      relationshipData,
+      rhythmData,
+      dialogueData,
+      showAnalysisDialog,
+      getStyleTagType,
+      getStyleText
     }
   }
 }

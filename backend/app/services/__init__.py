@@ -4,6 +4,7 @@ from .chapter_splitter import ChapterSplitter, ChapterContext
 from .ai_provider import AIProvider, get_ai_provider, AIProviderError
 from .ai_extractor import AIExtractor
 from .script_generator import ScriptGenerator
+from .script_analyzer import ScriptAnalyzer
 
 __all__ = [
     "NovelParser",
@@ -14,4 +15,5 @@ __all__ = [
     "AIProviderError",
     "AIExtractor",
     "ScriptGenerator",
+    "ScriptAnalyzer",
 ]
